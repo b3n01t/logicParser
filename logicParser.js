@@ -3,8 +3,9 @@
 	function Expecting(type,lastToken) {
 		this.type = type;
 		this.lastToken = lastToken;
-		this.lastTokenValue = lastToken.value || '';
-		this.lastTokenType = lastToken.type || '';
+
+		this.lastTokenValue = lastToken ? lastToken.value || '' : '';
+		this.lastTokenType = lastToken ? lastToken.type || '' : '';
 		this.name = 'Expecting';
 		this.message = 'Expecting ' + type+ ', last Token: '+this.lastTokenValue +' ('+this.lastTokenType+')' ;
 	}
@@ -47,7 +48,7 @@
 			// 'key': /^ *([a-zA-Z0-9-]{1,}) */, 
 			'comparator': /^ *(=|>=|<=|>|<|!=|like) */, // in['a','b'] -> $in:['a','b'];  >= ; <= 
 			'operator': /^(and) ?|^(or) ?|^(&&) ?|^(\|\|) ?|^(\() ?|^(\)) ?/, //|^(!) ?
-			'string': /^ *(([a-zA-Z0-9-_\.\*%:\(\)\\\/\.]{1,})|([\'\"][a-zA-Z0-9-_\.\*%:\(\)\\\/\. ]{1,}[\'\"])) */
+			'string': /^ *(([a-zA-Z0-9-_\.\*%:\\\/\.]{1,})|([\'\"][a-zA-Z0-9-_\.\*%:\(\)\\\/\. ]{1,}[\'\"])) */
 		};
 		this.tokens = [];
 
@@ -295,16 +296,34 @@
 				return ret;
 			}
 			for (k in o1) {
+				if(k in ret){
+					console.log('--------o1---------');
+					console.log(k);
+					console.log(ret[k]);
+					console.log('-------------------');
+				}
 				ret[k] = o1[k];
 			}
 			for (k in o2) {
-				ret[k] = o2[k];
+				console.log('--------o2---------');
+				if(k in ret){
+					ret['$and'] = [];
+					var a = {};
+					a[k] = o2[k];
+					ret['$and'].push(a);
+					var a = {};
+					a[k] = ret[k];
+					ret['$and'].push(a);
+					delete ret[k];
+				}else{
+					ret[k] = o2[k];
+				}
+				console.log('-------------------');
 			}
 			return ret;
 		}
 
 		function handleValue(value){
-			console.log(value);
 			var cleanValue;
 			if(value.match(/^[-]{0,1}\d*$/)){
 				cleanValue = parseInt(value);
@@ -324,7 +343,7 @@
 				key = node.key,
 				value = handleValue(node.value),
 				ret = {};
-				
+
 			switch (comparator) {
 				case '=':
 					ret[key] = value;
@@ -357,6 +376,13 @@
 		}
 
 		this.run = function(exp) {
+			console.log(JSON.stringify(exp, null, '  '));
+			if(typeof exp === 'string'){
+				var parser = new Parser(exp);
+				exp = parser.parse();
+				console.log(JSON.stringify(exp, null, '  '));
+			} 
+			
 			this.query = [];
 			prev = {};
 			var query = evaluate(exp);

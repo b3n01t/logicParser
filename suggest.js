@@ -46,8 +46,7 @@ function LogicSuggester(suggestions) {
 		if (value === ''){
 			return potentials;
 		}
-
-		var sug = []
+		var sug = [];
 		var r = new RegExp('.*' +escapeRegexp(value) + '.*', 'i');
 		for (var i = 0; i < potentials.length; i++) {
 			if (potentials[i]!=value && r.exec(potentials[i])) {
