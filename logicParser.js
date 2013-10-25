@@ -1,13 +1,13 @@
 (function(exports) {
 
-	function Expecting(type,lastToken) {
+	function Expecting(type, lastToken) {
 		this.type = type;
 		this.lastToken = lastToken;
 
 		this.lastTokenValue = lastToken ? lastToken.value || '' : '';
 		this.lastTokenType = lastToken ? lastToken.type || '' : '';
 		this.name = 'Expecting';
-		this.message = 'Expecting ' + type+ ', last Token: '+this.lastTokenValue +' ('+this.lastTokenType+')' ;
+		this.message = 'Expecting ' + type + ', last Token: ' + this.lastTokenValue + ' (' + this.lastTokenType + ')';
 	}
 	Expecting.prototype = new Error();
 	Expecting.prototype.constructor = Error;
@@ -36,7 +36,7 @@
 		this.isOr = function() {
 			return (this.type == 'operator' && (this.value == 'or' || this.value == '||'))
 		}
-		this.isEnd = function(){
+		this.isEnd = function() {
 			return this.type == 'END'
 		}
 	}
@@ -47,7 +47,7 @@
 			// 'key': /^ *([a-zA-Z0-9-]{1,}) *(=|>=|<=|>|<|!=)/, 
 			// 'key': /^ *([a-zA-Z0-9-]{1,}) */, 
 			'comparator': /^ *(=|>=|<=|>|<|!=|like) */, // in['a','b'] -> $in:['a','b'];  >= ; <= 
-			'operator': /^(and) ?|^(or) ?|^(&&) ?|^(\|\|) ?|^(\() ?|^(\)) ?/, //|^(!) ?
+			'operator': /^(and) ?|^(or) ?|^(&&) ?|^(\|\|) ?|^(\() ?|^(\)) ?|^(!) ?/, //|^(!) ?
 			'string': /^ *(([a-zA-Z0-9-_\.\*%:\\\/\.]{1,})|([\'\"][a-zA-Z0-9-_\.\*%:\(\)\\\/\. ]{1,}[\'\"])) */
 		};
 		this.tokens = [];
@@ -61,10 +61,10 @@
 				var re = tokenDef[tokenType];
 				var match = expression.match(re);
 				if (match) {
-					if (tokenType == 'string') { 
-						if(this.tokens.length > 0 && this.tokens[this.tokens.length-1].type=='comparator'){
+					if (tokenType == 'string') {
+						if (this.tokens.length > 0 && this.tokens[this.tokens.length - 1].type == 'comparator') {
 							type = 'value';
-						}else{
+						} else {
 							type = 'key';
 						}
 					}
@@ -92,28 +92,37 @@
 			}
 		}
 
-		this.last = function(){
-			return this.tokens[this.tokens.length-1].type=='END' ? this.tokens[this.tokens.length-2] : this.tokens[this.tokens.length-1];
+		this.last = function() {
+			return this.tokens[this.tokens.length - 1].type == 'END' ? this.tokens[this.tokens.length - 2] : this.tokens[this.tokens.length - 1];
 		}
 	}
 
 	function Parser(expression) {
 		this.expression = expression;
 		var that = this;
-		 that.tokenizer = (expression) ? new Tokenizer(expression) : new Tokenizer('');
+		that.tokenizer = (expression) ? new Tokenizer(expression) : new Tokenizer('');
 
 		// if (expression) that.tokenizer = new Tokenizer(expression);
 		// Condition ::= Key '=' Value | 
 		// 		  		 Key '>' Value |
-		//		 		 Key '<' Value 
+		//		 		 Key '<' Value |
+		//				 Key
 
 		function parseCondition() {
 			var keyToken = that.tokenizer.next();
-			if (!keyToken.isKey() && !keyToken.isValue()) throw new Expecting('KEY',that.tokenizer.last());
-			var compToken = that.tokenizer.next();
-			if (!compToken || !compToken.isComparator()) throw new Expecting('COMPARATOR',that.tokenizer.last());
+			if (!keyToken.isKey() && !keyToken.isValue()) throw new Expecting('KEY', that.tokenizer.last());
+			var compToken = that.tokenizer.peek();
+			if (compToken && compToken.isComparator()){
+				compToken = that.tokenizer.next();
+			}else{
+				return {
+					comparator: 'exists',
+					key: keyToken.value,
+				}				
+			}
+			if (!compToken || !compToken.isComparator()) throw new Expecting('COMPARATOR', that.tokenizer.last());
 			var valueToken = that.tokenizer.next();
-			if (!valueToken.isValue()) throw new Expecting('VALUE',that.tokenizer.last());
+			if (!valueToken.isValue()) throw new Expecting('VALUE', that.tokenizer.last());
 
 			return {
 				comparator: compToken.value,
@@ -153,20 +162,20 @@
 		//		 	 '!'Unary
 
 		function parseUnary() {
-			// var exp;
-			// var token = that.tokenizer.peek();
-			// if (token.isNot()) {
-			// 	token = that.tokenizer.next();
-			// 	exp = parseUnary();
+			var exp;
+			var token = that.tokenizer.peek();
+			if (token.isNot()) {
+				token = that.tokenizer.next();
+				exp = parseUnary();
 
-			// 	return {
-			// 		unary: {
-			// 			operator: token.value,
-			// 			expression: exp
-			// 		}
-			// 	}
-			// }
-			return parsePrimary()
+				return {
+					unary: {
+						operator: token.value,
+						expression: exp
+					}
+				}
+			}
+			return parsePrimary();
 		}
 
 		// AndExpression ::= Unary | 
@@ -179,7 +188,7 @@
 			if (token.isAnd()) {
 				token = that.tokenizer.next();
 				right = parseAndExp();
-				if (!right) throw new Expecting('EXPRESSION',token);
+				if (!right) throw new Expecting('EXPRESSION', token);
 
 				return {
 					binary: {
@@ -188,8 +197,8 @@
 						right: right
 					}
 				}
-			}else if(!token.isEnd() && !token.isOperator() ){
-				throw new Expecting('OPERATOR',token);
+			} else if (!token.isEnd() && !token.isOperator()) {
+				throw new Expecting('OPERATOR', token);
 			}
 			return left;
 		}
@@ -221,7 +230,7 @@
 
 		function parseExpression() {
 			var exp = parseOrExp();
-			if (!exp) throw new Expecting('EXPRESSION',that.tokenizer.last());
+			if (!exp) throw new Expecting('EXPRESSION', that.tokenizer.last());
 			return exp
 		}
 
@@ -241,7 +250,8 @@
 	// context Needed? 
 
 
-// BUG => AlertName != "SYSTEM DOWN - SERVER" and AlertName!= "SNMP NOT RESPONDING - SERVER" =>DOUBLE KEY
+	// BUG => AlertName != "SYSTEM DOWN - SERVER" and AlertName!= "SNMP NOT RESPONDING - SERVER" =>DOUBLE KEY
+
 	function EvalToMongo(expression) {
 		this.expression = expression;
 		evalToMongo = this;
@@ -251,16 +261,17 @@
 			return Object.prototype.toString.call(o) === "[object Array]";
 		}
 
-		function evaluate(node) {
+		function evaluate(node,not) {
+			var not = not || false;
 			if (node.hasOwnProperty('expression')) {
-				var exp = evaluate(node.expression);
-
+				var exp = evaluate(node.expression,not);
 				return exp
 			}
-			if (node.hasOwnProperty('binary')) {
+			
+			if (node.hasOwnProperty('binary') && !not) {
 				node = node.binary;
-				var left = evaluate(node.left);
-				var right = evaluate(node.right);
+				var left = evaluate(node.left,not);
+				var right = evaluate(node.right,not);
 				if (node.operator == 'or') {
 					return [].concat(left, right);
 				}
@@ -269,8 +280,15 @@
 					return and;
 				}
 			}
+			if (node.hasOwnProperty('unary')) {
+				node = node.unary;
+				if (node.operator == '!') {
+					return evaluate(node,true)
+				
+				}
+			}
 			if (node.hasOwnProperty('comparison')) {
-				return genComparison(node.comparison);
+				return genComparison(node.comparison,not);
 			}
 		}
 
@@ -296,17 +314,10 @@
 				return ret;
 			}
 			for (k in o1) {
-				if(k in ret){
-					console.log('--------o1---------');
-					console.log(k);
-					console.log(ret[k]);
-					console.log('-------------------');
-				}
 				ret[k] = o1[k];
 			}
 			for (k in o2) {
-				console.log('--------o2---------');
-				if(k in ret){
+				if (k in ret) {
 					ret['$and'] = [];
 					var a = {};
 					a[k] = o2[k];
@@ -315,25 +326,42 @@
 					a[k] = ret[k];
 					ret['$and'].push(a);
 					delete ret[k];
-				}else{
+				} else {
 					ret[k] = o2[k];
 				}
-				console.log('-------------------');
 			}
 			return ret;
 		}
 
-		function handleValue(value){
-			var cleanValue;
-			if(value.match(/^[-]{0,1}\d*$/)){
-				cleanValue = parseInt(value);
-			}else{
-				cleanValue = value.replace(/"/g,'');
+		// might be better to do Type detection when tokenizing..
+
+		function handleValue(value) {
+			if (value.match(/^[-]{0,1}\d*$/)) {
+				return parseInt(value);
+			} else {
+				var cleanValue = value.replace(/"/g, '');
+				if(cleanValue.match(/^[-]{0,1}\d*$/)){
+					return cleanValue;
+				}
+				//try to make a date out of the clean value
+				var d = new Date(cleanValue);
+				if (Object.prototype.toString.call(d) === "[object Date]") {
+					// it is a date
+					if (isNaN(d.getTime())) { // d.valueOf() could also work
+						// date is not valid
+						return cleanValue;
+					} else {
+						// date is valid
+						return d;
+					}
+				} else {
+					// not a date
+					return cleanValue;
+				}
 			}
-			return cleanValue;
 		}
 
-		function genComparison(node) {
+		function genComparison(node,not) {
 			/* {
               "comparator": "=",
               "key": "C",
@@ -341,8 +369,9 @@
             }*/
 			var comparator = node.comparator,
 				key = node.key,
-				value = handleValue(node.value),
 				ret = {};
+			if(node.value)
+				var value = handleValue(node.value);
 
 			switch (comparator) {
 				case '=':
@@ -353,9 +382,19 @@
 						$gt: value
 					};
 					break;
+				case '>=':
+					ret[key] = {
+						$gte: value
+					};
+					break;
 				case '<':
 					ret[key] = {
 						$lt: value
+					};
+					break;
+				case '<=':
+					ret[key] = {
+						$lte: value
 					};
 					break;
 				case '!=':
@@ -363,12 +402,23 @@
 						$ne: value
 					};
 					break;
-				case 'like': //not like???
-					ret[key] = {
-						$regex: '^'+value+'$', //$regex: value, 
-						$options: 'i'
-					};
+				case 'like':
+					//not like???
+					if(!not){
+						ret[key] = {
+							$regex: '^' + value + '$', //$regex: value, 
+							$options: 'i'
+						};
+					}else{
+						var r = new RegExp('^'+value+'$');
+						ret[key] = {$not:r}
+					}
 					break
+				case 'exists':
+					ret[key] = {
+						$exists:(true && !not)
+					}
+					break;
 				default:
 					break;
 			}
@@ -376,13 +426,11 @@
 		}
 
 		this.run = function(exp) {
-			console.log(JSON.stringify(exp, null, '  '));
-			if(typeof exp === 'string'){
+			if (typeof exp === 'string') {
 				var parser = new Parser(exp);
 				exp = parser.parse();
-				console.log(JSON.stringify(exp, null, '  '));
-			} 
-			
+			}
+
 			this.query = [];
 			prev = {};
 			var query = evaluate(exp);

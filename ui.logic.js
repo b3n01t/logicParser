@@ -146,7 +146,7 @@ logicsuggest.directive('logicExpression', ['$compile', '$position', function($co
 			function indexToArray(id, vals) {
 				return [((id < vals[0].length) ? 0 : 1), ((id < vals[0].length) ? id : id - vals[0].length)];
 			}
-			var input = angular.element('<input type="text" class="span11" ng-model="' + attr.ngModel + '">'),
+			var input = angular.element('<input type="text" class="span12" ng-model="' + attr.ngModel + '">'),
 				button = angular.element('<button class="btn"  ng-click="submit(' + attr.ngModel + ');" ng-show="valid"><i ng-class="{\'icon-spin\':loading==true}" class="icon-search"/></button>'), //class="icon-search"
 				suggestionsEl = angular.element('<div suggestions="suggestedValues" select="select" active-id="activeIdArr" query="query" open="open" position="position"></div>');
 
@@ -280,6 +280,11 @@ logicsuggest.directive('logicExpression', ['$compile', '$position', function($co
 						scope.result = {};
 						scope.suggestedValues = suggester.suggestBetter([]);
 						scope.suggestedValues[1] = [];
+					}
+					if(scope.valid){
+						scope.$parent[attr.ngModel+'_result']=scope.result;
+					}else{
+						scope.$parent[attr.ngModel+'_result']={};
 					}
 				});
 			}
