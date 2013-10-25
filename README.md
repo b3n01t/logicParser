@@ -9,9 +9,9 @@ The main file is [logicParser.js](https://github.com/b3n01t/logicParser/blob/mas
 This librairie is usable in both the browser and node.js
 
 Three objects are available:
-	* A lexer: require('logicParser.js').Tokenizer
-	* A parser: require('logicParser.js').Parser
-	* A compiler to a mongo query: require('logicParser.js').EvalToMongo
+*   A lexer: require('logicParser.js').Tokenizer
+*   A parser: require('logicParser.js').Parser
+*   A compiler to a mongo query: require('logicParser.js').EvalToMongo
 
 
 Example:
